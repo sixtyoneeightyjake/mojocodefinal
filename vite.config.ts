@@ -20,6 +20,7 @@ export default defineConfig((config) => {
       target: 'esnext',
     },
     plugins: [
+      shimAiMcpPlugin(),
       nodePolyfills({
         include: ['buffer', 'process', 'util', 'stream'],
         globals: {
@@ -107,6 +108,25 @@ function chrome129IssuePlugin() {
 
         next();
       });
+    },
+  };
+}
+
+function shimAiMcpPlugin() {
+  const id = 'virtual:shim-ai-mcp-stdio';
+
+  return {
+    name: 'shim-ai-mcp-stdio',
+    resolveId(source: string) {
+      if (source === 'ai/mcp-stdio') return id;
+      return null;
+    },
+    load(source: string) {
+      if (source === id) {
+        return 'export {}\n';
+      }
+
+      return null;
     },
   };
 }

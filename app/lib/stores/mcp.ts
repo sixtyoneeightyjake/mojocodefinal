@@ -1,10 +1,5 @@
 import { create } from 'zustand';
-import {
-  DEFAULT_MCP_CONFIG,
-  cloneMCPConfig,
-  type MCPConfig,
-  type MCPServerTools,
-} from '~/lib/services/mcpService';
+import { DEFAULT_MCP_CONFIG, cloneMCPConfig, type MCPConfig, type MCPServerTools } from '~/lib/services/mcpConfig';
 
 const MCP_SETTINGS_KEY = 'mcp_settings';
 const isBrowser = typeof window !== 'undefined';

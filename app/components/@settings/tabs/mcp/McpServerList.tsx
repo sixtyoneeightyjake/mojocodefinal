@@ -1,4 +1,4 @@
-import type { MCPServer } from '~/lib/services/mcpService';
+import type { MCPServer } from '~/lib/services/mcpConfig';
 import McpStatusBadge from '~/components/@settings/tabs/mcp/McpStatusBadge';
 import McpServerListItem from '~/components/@settings/tabs/mcp/McpServerListItem';
 
@@ -30,7 +30,7 @@ export default function McpServerList({
       {filteredEntries.map(([serverName, mcpServer]) => {
         const isAvailable = mcpServer.status === 'available';
         const isExpanded = expandedServer === serverName;
-        const serverTools = isAvailable ? Object.entries(mcpServer.tools) : [];
+        const serverTools = isAvailable ? (Object.entries(mcpServer.tools) as [string, any][]) : [];
 
         return (
           <div key={serverName} className="flex flex-col p-2 rounded-md bg-bolt-elements-background-depth-1">
