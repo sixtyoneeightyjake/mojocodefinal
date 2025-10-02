@@ -1,4 +1,9 @@
 import type { AppLoadContext } from '@remix-run/cloudflare';
+// Load local environment variables for server-side rendering in dev
+// This ensures loaders (like root loader) can access CLERK_* vars.
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 import { RemixServer } from '@remix-run/react';
 import { isbot } from 'isbot';
 import { renderToReadableStream } from 'react-dom/server';

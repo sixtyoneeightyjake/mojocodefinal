@@ -17,14 +17,10 @@ export class ImportExportService {
    * @param db The IndexedDB database instance
    * @returns A promise that resolves to the export data
    */
-  static async exportAllChats(db: IDBDatabase): Promise<{ chats: any[]; exportDate: string }> {
-    if (!db) {
-      throw new Error('Database not initialized');
-    }
-
+  static async exportAllChats(): Promise<{ chats: any[]; exportDate: string }> {
     try {
       // Get all chats from the database using the getAllChats helper
-      const chats = await getAllChats(db);
+      const chats = await getAllChats();
 
       // Validate and sanitize each chat before export
       const sanitizedChats = chats.map((chat) => ({
@@ -282,7 +278,7 @@ export class ImportExportService {
    * Reset all settings to default values
    * @param db The IndexedDB database instance
    */
-  static async resetAllSettings(db: IDBDatabase): Promise<void> {
+  static async resetAllSettings(_db?: IDBDatabase): Promise<void> {
     // 1. Clear all localStorage items related to application settings
     const localStorageKeysToPreserve: string[] = ['debug_mode']; // Keys to preserve if needed
 
@@ -319,14 +315,11 @@ export class ImportExportService {
     });
 
     // 3. Clear all data from IndexedDB
-    if (!db) {
-      console.warn('Database not initialized, skipping IndexedDB reset');
-    } else {
-      // Get all chats and delete them
-      const chats = await getAllChats(db);
-
-      const deletePromises = chats.map((chat) => deleteChat(db, chat.id));
-      await Promise.all(deletePromises);
+    try {
+      const chats = await getAllChats();
+      await Promise.allSettled(chats.map((chat) => deleteChat(chat.urlId ?? chat.id)));
+    } catch (error) {
+      console.error('Failed to clear chats from Supabase:', error);
     }
 
     // 4. Clear any chat snapshots
@@ -344,19 +337,13 @@ export class ImportExportService {
    * Delete all chats from the database
    * @param db The IndexedDB database instance
    */
-  static async deleteAllChats(db: IDBDatabase): Promise<void> {
+  static async deleteAllChats(_db?: IDBDatabase): Promise<void> {
     // Clear chat history from localStorage
     localStorage.removeItem('bolt_chat_history');
 
     // Clear chats from IndexedDB
-    if (!db) {
-      throw new Error('Database not initialized');
-    }
-
-    // Get all chats and delete them one by one
-    const chats = await getAllChats(db);
-    const deletePromises = chats.map((chat) => deleteChat(db, chat.id));
-    await Promise.all(deletePromises);
+    const chats = await getAllChats();
+    await Promise.allSettled(chats.map((chat) => deleteChat(chat.urlId ?? chat.id)));
   }
 
   // Private helper methods

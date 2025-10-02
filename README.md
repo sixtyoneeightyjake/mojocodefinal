@@ -266,6 +266,21 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 LMSTUDIO_BASE_URL=http://127.0.0.1:1234
 ```
 
+For authentication and session management, configure Clerk credentials as environment variables:
+
+```bash
+# Clerk authentication
+CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+# Optional: override hosted auth pages
+CLERK_SIGN_IN_URL=https://relevant-burro-77.accounts.dev/sign-in
+CLERK_SIGN_UP_URL=https://relevant-burro-77.accounts.dev/sign-up
+```
+
+- The publishable and secret keys are generated in your Clerk dashboard.
+- The provided sign-in and sign-up URLs point to the default hosted pages for this project; customize them if you run a different Clerk instance.
+- Restart the dev server after updating these values so the authentication loader picks them up.
+
 #### UI-Based Configuration
 - **Real-time Updates**: Changes take effect immediately
 - **Secure Storage**: API keys are stored securely in browser cookies

@@ -15,13 +15,109 @@ body {
 }
 
 :root {
-  --gradient-opacity: 0.8;
-  --primary-color: rgba(158, 117, 240, var(--gradient-opacity));
-  --secondary-color: rgba(138, 43, 226, var(--gradient-opacity));
-  --accent-color: rgba(128, 59, 239, var(--gradient-opacity));
-  // --primary-color: rgba(147, 112, 219, var(--gradient-opacity));
-  // --secondary-color: rgba(138, 43, 226, var(--gradient-opacity));
-  // --accent-color: rgba(180, 170, 220, var(--gradient-opacity));
+  --gradient-opacity: 0.75;
+  --primary-color: rgba(255, 43, 95, var(--gradient-opacity));
+  --secondary-color: rgba(255, 143, 178, calc(var(--gradient-opacity) * 0.7));
+  --accent-color: rgba(94, 100, 128, calc(var(--gradient-opacity) * 0.45));
+  --mojo-grid-color: rgba(255, 255, 255, 0.04);
+  --mojo-tracer-color: rgba(255, 59, 115, 0.35);
+}
+
+body {
+  position: relative;
+  color: var(--bolt-elements-textPrimary);
+  background: radial-gradient(circle at 10% 20%, rgba(255, 43, 95, 0.18), transparent 60%),
+    radial-gradient(circle at 80% 10%, rgba(255, 211, 224, 0.1), transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(90, 96, 128, 0.12), transparent 60%),
+    var(--bolt-elements-bg-depth-1);
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+}
+
+body::before {
+  background: linear-gradient(120deg, rgba(255, 43, 95, 0.12), transparent 55%),
+    radial-gradient(circle at 20% 30%, rgba(255, 71, 110, 0.25), transparent 55%),
+    radial-gradient(circle at 80% 60%, rgba(72, 76, 110, 0.18), transparent 55%);
+  filter: blur(18px);
+  animation: mojo-pan 24s ease-in-out infinite alternate;
+}
+
+body::after {
+  mask-image: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.7), transparent 70%);
+  background-image: linear-gradient(
+      115deg,
+      transparent 0,
+      transparent 38%,
+      rgba(255, 255, 255, 0.08) 45%,
+      transparent 55%,
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 38px,
+      var(--mojo-grid-color) 38px,
+      var(--mojo-grid-color) 40px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 38px,
+      var(--mojo-grid-color) 38px,
+      var(--mojo-grid-color) 40px
+    );
+  opacity: 0.7;
+  z-index: -3;
+}
+
+.surface-tracer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.surface-tracer::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 59, 115, 0.55) 40%,
+    rgba(255, 59, 115, 0.2) 60%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  opacity: 0.35;
+  filter: blur(6px);
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+.surface-tracer:hover::before,
+.surface-tracer:focus-within::before {
+  opacity: 0.8;
+  filter: blur(14px);
+}
+
+@keyframes mojo-pan {
+  0% {
+    transform: translate3d(-4%, -2%, 0) scale(1.02);
+  }
+  50% {
+    transform: translate3d(4%, 3%, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(-3%, 5%, 0) scale(1.03);
+  }
 }
 
 .modern-scrollbar {

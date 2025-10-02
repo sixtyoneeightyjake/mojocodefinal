@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import type { MCPConfig, MCPServerTools } from '~/lib/services/mcpService';
+import {
+  DEFAULT_MCP_CONFIG,
+  cloneMCPConfig,
+  type MCPConfig,
+  type MCPServerTools,
+} from '~/lib/services/mcpService';
 
 const MCP_SETTINGS_KEY = 'mcp_settings';
 const isBrowser = typeof window !== 'undefined';
@@ -11,9 +16,7 @@ type MCPSettings = {
 
 const defaultSettings = {
   maxLLMSteps: 5,
-  mcpConfig: {
-    mcpServers: {},
-  },
+  mcpConfig: cloneMCPConfig(DEFAULT_MCP_CONFIG),
 } satisfies MCPSettings;
 
 type Store = {
@@ -56,7 +59,18 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
           }));
         }
       } else {
-        localStorage.setItem(MCP_SETTINGS_KEY, JSON.stringify(defaultSettings));
+        try {
+          const defaultConfig = cloneMCPConfig(DEFAULT_MCP_CONFIG);
+          const serverTools = await updateServerConfig(defaultConfig);
+          const settings = { ...defaultSettings, mcpConfig: defaultConfig } satisfies MCPSettings;
+          localStorage.setItem(MCP_SETTINGS_KEY, JSON.stringify(settings));
+          set(() => ({ settings, serverTools }));
+        } catch (error) {
+          console.error('Error applying default mcp config:', error);
+          set(() => ({
+            error: `Error applying default mcp config: ${error instanceof Error ? error.message : String(error)}`,
+          }));
+        }
       }
     }
 

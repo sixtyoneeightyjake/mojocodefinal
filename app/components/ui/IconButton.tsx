@@ -46,9 +46,10 @@ export const IconButton = memo(
         <button
           ref={ref}
           className={classNames(
-            'flex items-center text-bolt-elements-item-contentDefault bg-transparent enabled:hover:text-bolt-elements-item-contentActive rounded-md p-1 enabled:hover:bg-bolt-elements-item-backgroundActive disabled:cursor-not-allowed focus:outline-none',
+            'surface-tracer relative flex items-center justify-center rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(14,17,26,0.72)] text-[rgba(220,224,232,0.76)] transition-[color,background,transform,box-shadow] duration-200 ease-out hover:text-white hover:bg-[rgba(255,43,95,0.18)] hover:-translate-y-[1px] shadow-[0_12px_24px_rgba(4,6,12,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(255,59,115,0.45)] disabled:cursor-not-allowed',
+            getPadding(size),
             {
-              [classNames('opacity-30', disabledClassName)]: disabled,
+              [classNames('opacity-40', disabledClassName)]: disabled,
             },
             className,
           )}
@@ -80,5 +81,19 @@ function getIconSize(size: IconSize) {
     return 'text-xl';
   } else {
     return 'text-2xl';
+  }
+}
+
+function getPadding(size: IconSize) {
+  if (size === 'sm') {
+    return 'p-1.5';
+  } else if (size === 'md') {
+    return 'p-1.5';
+  } else if (size === 'lg') {
+    return 'p-2';
+  } else if (size === 'xl') {
+    return 'p-2.5';
+  } else {
+    return 'p-3';
   }
 }

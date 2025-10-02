@@ -1,21 +1,21 @@
 import { useState, useMemo, useCallback } from 'react';
 import { debounce } from '~/utils/debounce';
-import type { ChatHistoryItem } from '~/lib/persistence';
 
-interface UseSearchFilterOptions {
-  items: ChatHistoryItem[];
-  searchFields?: (keyof ChatHistoryItem)[];
+interface UseSearchFilterOptions<T extends object> {
+  items: T[];
+  searchFields?: (keyof T)[];
   debounceMs?: number;
 }
 
-export function useSearchFilter({
+export function useSearchFilter<T extends object>({
   items = [],
-  searchFields = ['description'],
+  searchFields,
   debounceMs = 300,
-}: UseSearchFilterOptions) {
+}: UseSearchFilterOptions<T>) {
   const [searchQuery, setSearchQuery] = useState('');
+  const fields = searchFields ?? (['description'] as (keyof T)[]);
 
-  const debouncedSetSearch = useCallback(debounce(setSearchQuery, debounceMs), []);
+  const debouncedSetSearch = useCallback(debounce(setSearchQuery, debounceMs), [debounceMs]);
 
   const handleSearchChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +32,7 @@ export function useSearchFilter({
     const query = searchQuery.toLowerCase();
 
     return items.filter((item) =>
-      searchFields.some((field) => {
+      fields.some((field) => {
         const value = item[field];
 
         if (typeof value === 'string') {
@@ -42,7 +42,7 @@ export function useSearchFilter({
         return false;
       }),
     );
-  }, [items, searchQuery, searchFields]);
+  }, [items, searchQuery, fields]);
 
   return {
     searchQuery,

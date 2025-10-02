@@ -626,7 +626,7 @@ export function useDataOperations({
         // Step 4: Save current chats for potential undo
         showProgress('Preparing database transaction', 70);
 
-        const currentChats = await ImportExportService.exportAllChats(db);
+        const currentChats = await ImportExportService.exportAllChats();
         setLastOperation({ type: 'import-chats', data: { previous: currentChats } });
 
         // Step 5: Import chats
@@ -797,7 +797,7 @@ export function useDataOperations({
 
         // Step 2: Reset settings
         showProgress('Resetting settings to defaults', 50);
-        await ImportExportService.resetAllSettings(db);
+        await ImportExportService.resetAllSettings();
 
         // Step 3: Complete
         showProgress('Completing reset', 100);
@@ -867,12 +867,12 @@ export function useDataOperations({
       // Step 1: Save current chats for potential undo
       showProgress('Backing up current chats', 25);
 
-      const currentChats = await ImportExportService.exportAllChats(db);
+      const currentChats = await ImportExportService.exportAllChats();
       setLastOperation({ type: 'reset-chats', data: { previous: currentChats } });
 
       // Step 2: Delete chats
       showProgress('Deleting chats from database', 50);
-      await ImportExportService.deleteAllChats(db);
+      await ImportExportService.deleteAllChats();
 
       // Step 3: Complete
       showProgress('Completing deletion', 100);
@@ -1091,7 +1091,7 @@ export function useDataOperations({
 
         case 'import-chats': {
           // Delete imported chats and restore previous state
-          await ImportExportService.deleteAllChats(db);
+          await ImportExportService.deleteAllChats();
 
           // Reimport previous chats
           const transaction = db.transaction(['chats'], 'readwrite');

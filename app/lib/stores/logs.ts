@@ -52,11 +52,12 @@ class LogStore {
   private _readLogs = new Set<string>();
 
   constructor() {
-    // Load saved logs from cookies on initialization
-    this._loadLogs();
+    // Only perform cookie/localStorage operations in the browser
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      // Load saved logs from cookies on initialization
+      this._loadLogs();
 
-    // Only load read logs in browser environment
-    if (typeof window !== 'undefined') {
+      // Load read logs which rely on localStorage
       this._loadReadLogs();
     }
   }

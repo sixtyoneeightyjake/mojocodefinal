@@ -47,15 +47,7 @@ export default function McpServerList({
                   <span className="font-medium truncate text-left">{serverName}</span>
                 </div>
 
-                <div className="flex-1 min-w-0 truncate">
-                  {mcpServer.config.type === 'sse' || mcpServer.config.type === 'streamable-http' ? (
-                    <span className="text-xs text-bolt-elements-textSecondary truncate">{mcpServer.config.url}</span>
-                  ) : (
-                    <span className="text-xs text-bolt-elements-textSecondary truncate">
-                      {mcpServer.config.command} {mcpServer.config.args?.join(' ')}
-                    </span>
-                  )}
-                </div>
+                {/* Description removed to avoid exposing command args or API keys */}
               </div>
 
               <div className="ml-2 flex-shrink-0">

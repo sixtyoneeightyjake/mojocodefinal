@@ -16,7 +16,11 @@ export interface ConnectionState {
 }
 
 export interface UseGitHubConnectionReturn extends ConnectionState {
-  connect: (token: string, tokenType: 'classic' | 'fine-grained') => Promise<void>;
+  connect: (
+    token: string,
+    tokenType: 'classic' | 'fine-grained',
+    options?: { silent?: boolean; skipServerPersist?: boolean },
+  ) => Promise<void>;
   disconnect: () => void;
   refreshConnection: () => Promise<void>;
   testConnection: () => Promise<boolean>;
@@ -33,37 +37,19 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
   // Create API instance - will update when connection changes
   useGitHubAPI();
 
-  // Load saved connection on mount
-  useEffect(() => {
-    loadSavedConnection();
-  }, []);
-
-  const loadSavedConnection = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
+  const persistToken = useCallback(async (token: string, tokenType: 'classic' | 'fine-grained') => {
     try {
-      // Check if connection already exists in store (likely from initialization)
-      if (connection?.user) {
-        setIsLoading(false);
-        return;
-      }
-
-      // If we have a token but no user, or incomplete data, refresh
-      if (connection?.token && (!connection.user || !connection.stats)) {
-        await refreshConnectionData(connection);
-      }
-
-      setIsLoading(false);
+      await fetch('/api/github-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token, tokenType }),
+      });
     } catch (error) {
-      console.error('Error loading saved connection:', error);
-      setError('Failed to load saved connection');
-      setIsLoading(false);
-
-      // Clean up corrupted data
-      localStorage.removeItem(STORAGE_KEY);
+      console.error('Failed to persist GitHub token:', error);
     }
-  }, [connection]);
+  }, []);
 
   const refreshConnectionData = useCallback(async (connection: GitHubConnection) => {
     if (!connection.token) {
@@ -76,7 +62,7 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
         headers: {
           Accept: 'application/vnd.github.v3+json',
           Authorization: `${connection.tokenType === 'classic' ? 'token' : 'Bearer'} ${connection.token}`,
-          'User-Agent': 'Bolt.diy',
+          'User-Agent': 'mojocode',
         },
       });
 
@@ -97,7 +83,11 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
     }
   }, []);
 
-  const connect = useCallback(async (token: string, tokenType: 'classic' | 'fine-grained') => {
+  const connect = useCallback(async (
+    token: string,
+    tokenType: 'classic' | 'fine-grained',
+    options?: { silent?: boolean; skipServerPersist?: boolean },
+  ) => {
     console.log('useGitHubConnection.connect called with tokenType:', tokenType);
 
     if (!token.trim()) {
@@ -119,7 +109,7 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
         headers: {
           Accept: 'application/vnd.github.v3+json',
           Authorization: `${tokenType === 'classic' ? 'token' : 'Bearer'} ${token}`,
-          'User-Agent': 'Bolt.diy',
+          'User-Agent': 'mojocode',
         },
       });
 
@@ -152,7 +142,13 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
       // Update the store
       updateGitHubConnection(connectionData);
 
-      toast.success(`Connected to GitHub as ${userData.login}`);
+      if (!options?.skipServerPersist) {
+        await persistToken(token, tokenType);
+      }
+
+      if (!options?.silent) {
+        toast.success(`Connected to GitHub as ${userData.login}`);
+      }
     } catch (error) {
       console.error('Failed to connect to GitHub:', error);
 
@@ -164,7 +160,58 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
     } finally {
       isConnecting.set(false);
     }
-  }, []);
+  }, [persistToken]);
+
+  const loadSavedConnection = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (connection?.user) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (connection?.token && (!connection.user || !connection.stats)) {
+        await refreshConnectionData(connection);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!connection?.token) {
+        try {
+          const response = await fetch('/api/github-token');
+
+          if (response.ok) {
+            const data = (await response.json()) as { token?: string; tokenType?: 'classic' | 'fine-grained' };
+
+            if (data?.token) {
+              await connect(data.token, data.tokenType ?? 'classic', {
+                silent: true,
+                skipServerPersist: true,
+              });
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch (tokenError) {
+          console.error('Failed to load stored GitHub token:', tokenError);
+        }
+      }
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error loading saved connection:', error);
+      setError('Failed to load saved connection');
+      setIsLoading(false);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [connection, refreshConnectionData, connect]);
+
+  // Load saved connection on mount
+  useEffect(() => {
+    loadSavedConnection();
+  }, [loadSavedConnection]);
 
   const disconnect = useCallback(() => {
     // Clear localStorage
@@ -184,6 +231,10 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
 
     setError(null);
     toast.success('Disconnected from GitHub');
+
+    fetch('/api/github-token', { method: 'DELETE' }).catch((error) => {
+      console.error('Failed to remove stored GitHub token:', error);
+    });
   }, []);
 
   const refreshConnection = useCallback(async () => {
@@ -224,7 +275,7 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
         headers: {
           Accept: 'application/vnd.github.v3+json',
           Authorization: `${connection.tokenType === 'classic' ? 'token' : 'Bearer'} ${connection.token}`,
-          'User-Agent': 'Bolt.diy',
+          'User-Agent': 'mojocode',
         },
       });
 

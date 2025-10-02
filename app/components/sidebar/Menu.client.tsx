@@ -1,19 +1,29 @@
 import { motion, type Variants } from 'framer-motion';
+import { SignedIn, SignedOut, UserButton, useUser } from '@clerk/remix';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
-import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
 import { ControlPanel } from '~/components/@settings/core/ControlPanel';
-import { SettingsButton, HelpButton } from '~/components/ui/SettingsButton';
+import { SettingsButton } from '~/components/ui/SettingsButton';
 import { Button } from '~/components/ui/Button';
-import { db, deleteById, getAll, chatId, type ChatHistoryItem, useChatHistory } from '~/lib/persistence';
+import {
+  chatId,
+  type ChatSummary,
+  useChatHistory,
+  fetchChatList,
+  deleteChat as deleteChatRequest,
+} from '~/lib/persistence';
 import { cubicEasingFn } from '~/utils/easings';
 import { HistoryItem } from './HistoryItem';
 import { binDates } from './date-binning';
 import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
 import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
-import { profileStore } from '~/lib/stores/profile';
+import { profileStore, updateProfile } from '~/lib/stores/profile';
+
+const CLERK_SIGN_IN_URL = 'https://relevant-burro-77.accounts.dev/sign-in';
+const CLERK_SIGN_UP_URL = 'https://relevant-burro-77.accounts.dev/sign-up';
+const SETTINGS_PASSWORD = '60180jake';
 
 const menuVariants = {
   closed: {
@@ -37,8 +47,8 @@ const menuVariants = {
 } satisfies Variants;
 
 type DialogContent =
-  | { type: 'delete'; item: ChatHistoryItem }
-  | { type: 'bulkDelete'; items: ChatHistoryItem[] }
+  | { type: 'delete'; item: ChatSummary }
+  | { type: 'bulkDelete'; items: ChatSummary[] }
   | null;
 
 function CurrentDateTime() {
@@ -53,9 +63,11 @@ function CurrentDateTime() {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800/50">
-      <div className="h-4 w-4 i-ph:clock opacity-80" />
-      <div className="flex gap-2">
+    <div className="flex items-center gap-3 px-6 py-3 text-[11px] uppercase tracking-[0.32em] text-bolt-elements-textSecondary border-b border-[rgba(255,255,255,0.08)] bg-[rgba(12,15,24,0.6)] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <div className="flex items-center justify-center h-7 w-7 rounded-full bg-[rgba(255,59,115,0.35)] text-white shadow-[0_0_12px_rgba(255,59,115,0.45)]">
+        <div className="i-ph:clock text-base" />
+      </div>
+      <div className="flex gap-3 text-[11px] tracking-[0.24em]">
         <span>{dateTime.toLocaleDateString()}</span>
         <span>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
@@ -66,52 +78,56 @@ function CurrentDateTime() {
 export const Menu = () => {
   const { duplicateCurrentChat, exportChat } = useChatHistory();
   const menuRef = useRef<HTMLDivElement>(null);
-  const [list, setList] = useState<ChatHistoryItem[]>([]);
+  const [list, setList] = useState<ChatSummary[]>([]);
   const [open, setOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState<DialogContent>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const profile = useStore(profileStore);
+  const { user, isSignedIn, isLoaded } = useUser();
+  const signedInDisplayName =
+    user?.fullName || user?.username || user?.primaryEmailAddress?.emailAddress || 'Signed in';
+  const guestDisplayName = profile?.username || 'Guest';
+
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  const { filteredItems: filteredList, handleSearchChange } = useSearchFilter({
+  const { filteredItems: filteredList, handleSearchChange } = useSearchFilter<ChatSummary>({
     items: list,
     searchFields: ['description'],
   });
 
-  const loadEntries = useCallback(() => {
-    if (db) {
-      getAll(db)
-        .then((list) => list.filter((item) => item.urlId && item.description))
-        .then(setList)
-        .catch((error) => toast.error(error.message));
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
     }
+
+    if (isSignedIn && user) {
+      updateProfile({
+        username: user.fullName || user.username || user.primaryEmailAddress?.emailAddress || '',
+        avatar: user.imageUrl || '',
+      });
+    } else if (!isSignedIn) {
+      updateProfile({ username: '', avatar: '' });
+    }
+  }, [isLoaded, isSignedIn, user]);
+
+  const loadEntries = useCallback(() => {
+    fetchChatList()
+      .then((entries) => entries.filter((item) => item.urlId && item.description))
+      .then(setList)
+      .catch((error) => toast.error(error.message));
   }, []);
 
   const deleteChat = useCallback(
     async (id: string): Promise<void> => {
-      if (!db) {
-        throw new Error('Database not available');
-      }
-
-      // Delete chat snapshot from localStorage
-      try {
-        const snapshotKey = `snapshot:${id}`;
-        localStorage.removeItem(snapshotKey);
-        console.log('Removed snapshot for chat:', id);
-      } catch (snapshotError) {
-        console.error(`Error deleting snapshot for chat ${id}:`, snapshotError);
-      }
-
-      // Delete the chat from the database
-      await deleteById(db, id);
+      await deleteChatRequest(id);
       console.log('Successfully deleted chat:', id);
     },
-    [db],
+    [],
   );
 
   const deleteItem = useCallback(
-    (event: React.UIEvent, item: ChatHistoryItem) => {
+    (event: React.UIEvent, item: ChatSummary) => {
       event.preventDefault();
       event.stopPropagation();
 
@@ -150,8 +166,8 @@ export const Menu = () => {
 
   const deleteSelectedItems = useCallback(
     async (itemsToDeleteIds: string[]) => {
-      if (!db || itemsToDeleteIds.length === 0) {
-        console.log('Bulk delete skipped: No DB or no items to delete.');
+      if (itemsToDeleteIds.length === 0) {
+        console.log('Bulk delete skipped: no items to delete.');
         return;
       }
 
@@ -199,7 +215,7 @@ export const Menu = () => {
         window.location.pathname = '/';
       }
     },
-    [deleteChat, loadEntries, db],
+    [deleteChat, loadEntries],
   );
 
   const closeDialog = () => {
@@ -309,8 +325,19 @@ export const Menu = () => {
   };
 
   const handleSettingsClick = () => {
-    setIsSettingsOpen(true);
-    setOpen(false);
+    const input = window.prompt('Enter the settings password');
+
+    if (input === null) {
+      return;
+    }
+
+    if (input.trim() === SETTINGS_PASSWORD) {
+      setIsSettingsOpen(true);
+      setOpen(false);
+      return;
+    }
+
+    toast.error('Incorrect password.');
   };
 
   const handleSettingsClose = () => {
@@ -329,54 +356,84 @@ export const Menu = () => {
         initial="closed"
         animate={open ? 'open' : 'closed'}
         variants={menuVariants}
-        style={{ width: '340px' }}
         className={classNames(
-          'flex selection-accent flex-col side-menu fixed top-0 h-full rounded-r-2xl',
-          'bg-white dark:bg-gray-950 border-r border-bolt-elements-borderColor',
-          'shadow-sm text-sm',
+          'surface-tracer flex flex-col side-menu fixed top-0 h-full w-[340px] rounded-r-3xl border border-[rgba(255,255,255,0.08)] backdrop-blur-2xl bg-[rgba(6,8,14,0.92)] text-sm text-bolt-elements-textSecondary shadow-[0_32px_80px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(255,59,115,0.08)]',
           isSettingsOpen ? 'z-40' : 'z-sidebar',
         )}
       >
-        <div className="h-12 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-900/50 rounded-tr-2xl">
-          <div className="text-gray-900 dark:text-white font-medium"></div>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(12,15,24,0.6)] backdrop-blur-xl rounded-tr-3xl">
+          <div className="text-bolt-elements-textPrimary font-semibold tracking-[0.22em] uppercase text-xs">
+            MojoCode
+          </div>
           <div className="flex items-center gap-3">
-            <HelpButton onClick={() => window.open('https://stackblitz-labs.github.io/bolt.diy/', '_blank')} />
-            <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
-              {profile?.username || 'Guest User'}
-            </span>
-            <div className="flex items-center justify-center w-[32px] h-[32px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0">
-              {profile?.avatar ? (
-                <img
-                  src={profile.avatar}
-                  alt={profile?.username || 'User'}
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                  decoding="sync"
+            <SignedIn>
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-sm text-bolt-elements-textPrimary truncate max-w-[160px]">
+                  {signedInDisplayName}
+                </span>
+                <UserButton
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      userButtonAvatarBox: 'w-8 h-8',
+                    },
+                  }}
                 />
-              ) : (
-                <div className="i-ph:user-fill text-lg" />
-              )}
-            </div>
+              </div>
+            </SignedIn>
+            <SignedOut>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm text-bolt-elements-textSecondary truncate max-w-[120px]">
+                  {guestDisplayName}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.assign(CLERK_SIGN_IN_URL);
+                    }
+                  }}
+                >
+                  <span className="i-ph:sign-in text-sm" />
+                  Sign In
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.assign(CLERK_SIGN_UP_URL);
+                    }
+                  }}
+                >
+                  <span className="i-ph:user-plus text-sm" />
+                  Sign Up
+                </Button>
+              </div>
+            </SignedOut>
           </div>
         </div>
         <CurrentDateTime />
         <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
-          <div className="p-4 space-y-3">
-            <div className="flex gap-2">
+          <div className="p-5 space-y-4">
+            <div className="flex gap-3">
               <a
                 href="/"
-                className="flex-1 flex gap-2 items-center bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-500/20 rounded-lg px-4 py-2 transition-colors"
+                className="surface-tracer flex-1 flex gap-3 items-center px-5 py-3 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,43,95,0.2)] text-white/90 hover:bg-[rgba(255,43,95,0.32)] hover:text-white transition-[background,box-shadow] duration-200 shadow-[0_20px_45px_rgba(255,43,95,0.25)]"
               >
                 <span className="inline-block i-ph:plus-circle h-4 w-4" />
-                <span className="text-sm font-medium">Start new chat</span>
+                <span className="text-sm font-semibold tracking-[0.18em] uppercase">Start new chat</span>
               </a>
               <button
                 onClick={toggleSelectionMode}
                 className={classNames(
-                  'flex gap-1 items-center rounded-lg px-3 py-2 transition-colors',
+                  'surface-tracer flex items-center justify-center rounded-2xl px-4 py-3 transition-[background,color,box-shadow] duration-200 uppercase tracking-[0.18em] text-[11px] font-semibold gap-2',
                   selectionMode
-                    ? 'bg-purple-600 dark:bg-purple-500 text-white border border-purple-700 dark:border-purple-600'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700',
+                    ? 'bg-[rgba(255,43,95,0.32)] text-white shadow-[0_18px_36px_rgba(255,43,95,0.28)]'
+                    : 'bg-[rgba(14,17,26,0.78)] text-[rgba(214,218,228,0.75)] hover:text-white hover:bg-[rgba(255,43,95,0.18)] shadow-[0_16px_34px_rgba(0,0,0,0.45)]',
                 )}
                 aria-label={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
               >
@@ -384,11 +441,11 @@ export const Menu = () => {
               </button>
             </div>
             <div className="relative w-full">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                <span className="i-ph:magnifying-glass h-4 w-4 text-gray-400 dark:text-gray-500" />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[rgba(173,179,191,0.65)]">
+                <span className="i-ph:magnifying-glass h-4 w-4" />
               </div>
               <input
-                className="w-full bg-gray-50 dark:bg-gray-900 relative pl-9 pr-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500/50 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500 border border-gray-200 dark:border-gray-800"
+                className="w-full bg-[rgba(12,14,22,0.82)] relative pl-12 pr-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[rgba(255,59,115,0.35)] text-sm text-bolt-elements-textPrimary placeholder:text-[rgba(146,150,168,0.55)] border border-[rgba(255,255,255,0.08)] transition-[border,box-shadow] duration-200 shadow-[0_14px_40px_rgba(0,0,0,0.45)]"
                 type="search"
                 placeholder="Search chats..."
                 onChange={handleSearchChange}
@@ -396,8 +453,10 @@ export const Menu = () => {
               />
             </div>
           </div>
-          <div className="flex items-center justify-between text-sm px-4 py-2">
-            <div className="font-medium text-gray-600 dark:text-gray-400">Your Chats</div>
+          <div className="flex items-center justify-between text-sm px-5 py-3">
+            <div className="font-semibold text-[rgba(236,238,245,0.78)] tracking-[0.22em] uppercase text-xs">
+              Your Chats
+            </div>
             {selectionMode && (
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={selectAll}>
@@ -414,16 +473,16 @@ export const Menu = () => {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-auto px-3 pb-3">
+          <div className="flex-1 overflow-auto px-4 pb-4 modern-scrollbar">
             {filteredList.length === 0 && (
-              <div className="px-4 text-gray-500 dark:text-gray-400 text-sm">
+              <div className="px-4 text-[rgba(173,179,191,0.72)] text-sm">
                 {list.length === 0 ? 'No previous conversations' : 'No matches found'}
               </div>
             )}
             <DialogRoot open={dialogContent !== null}>
               {binDates(filteredList).map(({ category, items }) => (
                 <div key={category} className="mt-2 first:mt-0 space-y-1">
-                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 sticky top-0 z-1 bg-white dark:bg-gray-950 px-4 py-1">
+                  <div className="text-[11px] font-semibold tracking-[0.18em] uppercase text-[rgba(214,218,228,0.55)] sticky top-0 z-1 bg-[rgba(8,10,16,0.92)]/90 backdrop-blur px-4 py-2 rounded-xl">
                     {category}
                   </div>
                   <div className="space-y-0.5 pr-1">
@@ -450,19 +509,19 @@ export const Menu = () => {
               <Dialog onBackdrop={closeDialog} onClose={closeDialog}>
                 {dialogContent?.type === 'delete' && (
                   <>
-                    <div className="p-6 bg-white dark:bg-gray-950">
-                      <DialogTitle className="text-gray-900 dark:text-white">Delete Chat?</DialogTitle>
-                      <DialogDescription className="mt-2 text-gray-600 dark:text-gray-400">
+                    <div className="p-6 bg-[rgba(10,12,20,0.95)] text-bolt-elements-textSecondary">
+                      <DialogTitle className="text-bolt-elements-textPrimary">Delete Chat?</DialogTitle>
+                      <DialogDescription className="mt-3 text-[rgba(187,191,202,0.76)] leading-relaxed">
                         <p>
                           You are about to delete{' '}
-                          <span className="font-medium text-gray-900 dark:text-white">
+                          <span className="font-semibold text-bolt-elements-textPrimary">
                             {dialogContent.item.description}
                           </span>
                         </p>
-                        <p className="mt-2">Are you sure you want to delete this chat?</p>
+                        <p className="mt-3">Are you sure you want to delete this chat?</p>
                       </DialogDescription>
                     </div>
-                    <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex justify-end gap-3 px-6 py-4 bg-[rgba(7,10,18,0.9)] border-t border-[rgba(255,255,255,0.08)]">
                       <DialogButton type="secondary" onClick={closeDialog}>
                         Cancel
                       </DialogButton>
@@ -481,18 +540,18 @@ export const Menu = () => {
                 )}
                 {dialogContent?.type === 'bulkDelete' && (
                   <>
-                    <div className="p-6 bg-white dark:bg-gray-950">
-                      <DialogTitle className="text-gray-900 dark:text-white">Delete Selected Chats?</DialogTitle>
-                      <DialogDescription className="mt-2 text-gray-600 dark:text-gray-400">
+                    <div className="p-6 bg-[rgba(10,12,20,0.95)] text-bolt-elements-textSecondary">
+                      <DialogTitle className="text-bolt-elements-textPrimary">Delete Selected Chats?</DialogTitle>
+                      <DialogDescription className="mt-3 text-[rgba(187,191,202,0.76)] leading-relaxed">
                         <p>
                           You are about to delete {dialogContent.items.length}{' '}
                           {dialogContent.items.length === 1 ? 'chat' : 'chats'}:
                         </p>
-                        <div className="mt-2 max-h-32 overflow-auto border border-gray-100 dark:border-gray-800 rounded-md bg-gray-50 dark:bg-gray-900 p-2">
+                        <div className="mt-3 max-h-32 overflow-auto border border-[rgba(255,255,255,0.08)] rounded-xl bg-[rgba(7,9,15,0.9)] p-3">
                           <ul className="list-disc pl-5 space-y-1">
                             {dialogContent.items.map((item) => (
-                              <li key={item.id} className="text-sm">
-                                <span className="font-medium text-gray-900 dark:text-white">{item.description}</span>
+                              <li key={item.id} className="text-sm text-[rgba(214,218,228,0.76)]">
+                                <span className="font-semibold text-bolt-elements-textPrimary">{item.description}</span>
                               </li>
                             ))}
                           </ul>
@@ -500,7 +559,7 @@ export const Menu = () => {
                         <p className="mt-3">Are you sure you want to delete these chats?</p>
                       </DialogDescription>
                     </div>
-                    <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex justify-end gap-3 px-6 py-4 bg-[rgba(7,10,18,0.9)] border-t border-[rgba(255,255,255,0.08)]">
                       <DialogButton type="secondary" onClick={closeDialog}>
                         Cancel
                       </DialogButton>
@@ -525,11 +584,10 @@ export const Menu = () => {
               </Dialog>
             </DialogRoot>
           </div>
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-4 py-3">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-start border-t border-[rgba(255,255,255,0.08)] px-5 py-4 bg-[rgba(8,10,17,0.85)]">
+            <div className="flex items-center gap-3 text-[rgba(214,218,228,0.78)]">
               <SettingsButton onClick={handleSettingsClick} />
             </div>
-            <ThemeSwitch />
           </div>
         </div>
       </motion.div>

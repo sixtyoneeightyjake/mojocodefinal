@@ -1,6 +1,6 @@
 import { useParams } from '@remix-run/react';
 import { classNames } from '~/utils/classNames';
-import { type ChatHistoryItem } from '~/lib/persistence';
+import { type ChatSummary as ChatHistoryItem } from '~/lib/persistence';
 import WithTooltip from '~/components/ui/Tooltip';
 import { useEditChatDescription } from '~/lib/hooks';
 import { forwardRef, type ForwardedRef, useCallback } from 'react';
@@ -68,8 +68,11 @@ export function HistoryItem({
   return (
     <div
       className={classNames(
-        'group rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50/80 dark:hover:bg-gray-800/30 overflow-hidden flex justify-between items-center px-3 py-2 transition-colors',
-        { 'text-gray-900 dark:text-white bg-gray-50/80 dark:bg-gray-800/30': isActiveChat },
+        'group surface-tracer rounded-2xl text-sm text-[rgba(214,218,228,0.78)] hover:text-white hover:bg-[rgba(255,43,95,0.12)] overflow-hidden flex justify-between items-center px-4 py-3 transition-[background,color,box-shadow] duration-150 border border-transparent',
+        {
+          'text-white bg-[rgba(255,43,95,0.24)] shadow-[0_16px_40px_rgba(255,43,95,0.25)] border-[rgba(255,59,115,0.25)]':
+            isActiveChat,
+        },
         { 'cursor-pointer': selectionMode },
       )}
       onClick={selectionMode ? handleItemClick : undefined}
@@ -89,7 +92,7 @@ export function HistoryItem({
         <form onSubmit={handleSubmit} className="flex-1 flex items-center gap-2">
           <input
             type="text"
-            className="flex-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-md px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-800 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            className="flex-1 bg-[rgba(12,14,22,0.82)] text-bolt-elements-textPrimary rounded-xl px-4 py-2 text-sm border border-[rgba(255,255,255,0.1)] focus:outline-none focus:ring-2 focus:ring-[rgba(255,59,115,0.35)]"
             autoFocus
             value={currentDescription}
             onChange={handleChange}
@@ -98,7 +101,7 @@ export function HistoryItem({
           />
           <button
             type="submit"
-            className="i-ph:check h-4 w-4 text-gray-500 hover:text-purple-500 transition-colors"
+            className="i-ph:check h-4 w-4 text-[rgba(173,179,191,0.65)] hover:text-[rgba(255,59,115,0.85)] transition-colors"
             onMouseDown={handleSubmit}
           />
         </form>
@@ -113,10 +116,10 @@ export function HistoryItem({
           </WithTooltip>
           <div
             className={classNames(
-              'absolute right-0 top-0 bottom-0 flex items-center bg-transparent px-2 transition-colors',
+              'absolute right-0 top-0 bottom-0 flex items-center bg-transparent px-2 transition-opacity',
             )}
           >
-            <div className="flex items-center gap-2.5 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2.5 text-[rgba(140,146,162,0.68)] opacity-0 group-hover:opacity-100 transition-opacity">
               <ChatActionButton
                 toolTipContent="Export"
                 icon="i-ph:download-simple h-4 w-4"
@@ -146,7 +149,7 @@ export function HistoryItem({
               <ChatActionButton
                 toolTipContent="Delete"
                 icon="i-ph:trash h-4 w-4"
-                className="hover:text-red-500 dark:hover:text-red-400"
+                className="hover:text-[rgba(255,75,110,0.9)]"
                 onClick={handleDeleteClick}
               />
             </div>
@@ -178,7 +181,7 @@ const ChatActionButton = forwardRef(
         <button
           ref={ref}
           type="button"
-          className={`text-gray-400 dark:text-gray-500 hover:text-purple-500 dark:hover:text-purple-400 transition-colors ${icon} ${className ? className : ''}`}
+          className={`text-[rgba(140,146,162,0.68)] hover:text-[rgba(255,59,115,0.9)] transition-colors ${icon} ${className ? className : ''}`}
           onClick={onClick}
         />
       </WithTooltip>

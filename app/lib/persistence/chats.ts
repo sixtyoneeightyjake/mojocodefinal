@@ -1,16 +1,6 @@
-/**
- * Functions for managing chat data in IndexedDB
- */
-
 import type { Message } from 'ai';
-import type { IChatMetadata } from './db'; // Import IChatMetadata
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: number;
-}
+import { fetchChatList, fetchChat, deleteChat as deleteChatRequest } from './client';
+import type { IChatMetadata } from './types';
 
 export interface Chat {
   id: string;
@@ -18,123 +8,67 @@ export interface Chat {
   messages: Message[];
   timestamp: string;
   urlId?: string;
-  metadata?: IChatMetadata;
+  metadata?: IChatMetadata | null;
 }
 
-/**
- * Get all chats from the database
- * @param db The IndexedDB database instance
- * @returns A promise that resolves to an array of chats
- */
-export async function getAllChats(db: IDBDatabase): Promise<Chat[]> {
-  console.log(`getAllChats: Using database '${db.name}', version ${db.version}`);
+function resolveChatIdentifier(dbOrId: IDBDatabase | string, maybeId?: string): string {
+  if (typeof dbOrId === 'string') {
+    return dbOrId;
+  }
 
-  return new Promise((resolve, reject) => {
-    try {
-      const transaction = db.transaction(['chats'], 'readonly');
-      const store = transaction.objectStore('chats');
-      const request = store.getAll();
+  if (typeof maybeId === 'string') {
+    return maybeId;
+  }
 
-      request.onsuccess = () => {
-        const result = request.result || [];
-        console.log(`getAllChats: Found ${result.length} chats in database '${db.name}'`);
-        resolve(result);
-      };
-
-      request.onerror = () => {
-        console.error(`getAllChats: Error querying database '${db.name}':`, request.error);
-        reject(request.error);
-      };
-    } catch (err) {
-      console.error(`getAllChats: Error creating transaction on database '${db.name}':`, err);
-      reject(err);
-    }
-  });
+  throw new Error('Chat identifier is required');
 }
 
-/**
- * Get a chat by ID
- * @param db The IndexedDB database instance
- * @param id The ID of the chat to get
- * @returns A promise that resolves to the chat or null if not found
- */
-export async function getChatById(db: IDBDatabase, id: string): Promise<Chat | null> {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['chats'], 'readonly');
-    const store = transaction.objectStore('chats');
-    const request = store.get(id);
+export async function getAllChats(_db?: IDBDatabase): Promise<Chat[]> {
+  const summaries = await fetchChatList();
 
-    request.onsuccess = () => {
-      resolve(request.result || null);
-    };
+  const chats = await Promise.all(
+    summaries.map(async (summary) => {
+      const chat = await fetchChat(summary.urlId);
 
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+      return {
+        id: chat.id,
+        description: chat.description,
+        messages: chat.messages,
+        timestamp: chat.updatedAt,
+        urlId: chat.urlId,
+        metadata: chat.metadata ?? null,
+      } satisfies Chat;
+    }),
+  );
+
+  return chats;
 }
 
-/**
- * Save a chat to the database
- * @param db The IndexedDB database instance
- * @param chat The chat to save
- * @returns A promise that resolves when the chat is saved
- */
-export async function saveChat(db: IDBDatabase, chat: Chat): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['chats'], 'readwrite');
-    const store = transaction.objectStore('chats');
-    const request = store.put(chat);
-
-    request.onsuccess = () => {
-      resolve();
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+export async function deleteChat(dbOrId: IDBDatabase | string, maybeId?: string): Promise<void> {
+  const identifier = resolveChatIdentifier(dbOrId, maybeId);
+  await deleteChatRequest(identifier);
 }
 
-/**
- * Delete a chat by ID
- * @param db The IndexedDB database instance
- * @param id The ID of the chat to delete
- * @returns A promise that resolves when the chat is deleted
- */
-export async function deleteChat(db: IDBDatabase, id: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['chats'], 'readwrite');
-    const store = transaction.objectStore('chats');
-    const request = store.delete(id);
-
-    request.onsuccess = () => {
-      resolve();
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+export async function deleteAllChats(): Promise<void> {
+  const summaries = await fetchChatList();
+  await Promise.allSettled(summaries.map((summary) => deleteChatRequest(summary.urlId)));
 }
 
-/**
- * Delete all chats
- * @param db The IndexedDB database instance
- * @returns A promise that resolves when all chats are deleted
- */
-export async function deleteAllChats(db: IDBDatabase): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['chats'], 'readwrite');
-    const store = transaction.objectStore('chats');
-    const request = store.clear();
-
-    request.onsuccess = () => {
-      resolve();
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
+export async function saveChat(chat: Chat): Promise<void> {
+  await fetch('/api/chat-history', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      intent: 'upsert',
+      payload: {
+        urlId: chat.urlId,
+        description: chat.description ?? null,
+        messages: chat.messages,
+        metadata: chat.metadata ?? null,
+        snapshot: null,
+      },
+    }),
   });
 }

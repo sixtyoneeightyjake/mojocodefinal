@@ -71,6 +71,36 @@ export const mcpConfigSchema = z.object({
 });
 export type MCPConfig = z.infer<typeof mcpConfigSchema>;
 
+export const DEFAULT_MCP_CONFIG: MCPConfig = {
+  mcpServers: {
+    context7: {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', '@upstash/context7-mcp', '--api-key', 'ctx7sk-99c9530c-3e4c-4a0b-8277-55d5509d46a8'],
+    },
+    'sequential-thinking': {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
+    },
+    'tavily-remote-mcp': {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', 'mcp-remote', 'https://mcp.tavily.com/mcp/?tavilyApiKey=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'],
+      env: {},
+    },
+    'desktop-commander': {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', '@wonderwhy-er/desktop-commander@latest'],
+    },
+  },
+};
+
+export function cloneMCPConfig(config: MCPConfig): MCPConfig {
+  return JSON.parse(JSON.stringify(config)) as MCPConfig;
+}
+
 export type MCPClient = {
   tools: () => Promise<ToolSet>;
   close: () => Promise<void>;
@@ -107,13 +137,16 @@ export class MCPService {
   private _toolsWithoutExecute: ToolSet = {};
   private _mcpToolsPerServer: MCPServerTools = {};
   private _toolNamesToServerNames = new Map<string, string>();
-  private _config: MCPConfig = {
-    mcpServers: {},
-  };
+  private _config: MCPConfig = cloneMCPConfig(DEFAULT_MCP_CONFIG);
 
   static getInstance(): MCPService {
     if (!MCPService._instance) {
       MCPService._instance = new MCPService();
+      MCPService._instance
+        .updateConfig(cloneMCPConfig(DEFAULT_MCP_CONFIG))
+        .catch((error) => {
+          logger.error('Failed to initialize default MCP configuration', error);
+        });
     }
 
     return MCPService._instance;
