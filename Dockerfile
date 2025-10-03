@@ -25,7 +25,11 @@ RUN pnpm install --offline --frozen-lockfile
 # Build the Remix app (SSR + client)
 RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm run build
 
-# Keep only production deps for runtime
+
+# ---- production deps stage ----
+FROM build AS production-deps
+
+# Keep only production deps for runtime image size
 RUN pnpm prune --prod --ignore-scripts
 
 
@@ -42,10 +46,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy only what we need to run
-COPY --from=build /app/build /app/build
-COPY --from=build /app/public /app/public
-COPY --from=build /app/node_modules /app/node_modules
-COPY --from=build /app/package.json /app/package.json
+COPY --from=production-deps /app/build /app/build
+COPY --from=production-deps /app/public /app/public
+COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=production-deps /app/package.json /app/package.json
 
 EXPOSE 3000
 
