@@ -136,7 +136,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
       )}
       <div
         className={classNames(
-          'relative surface-tracer shadow-[0_18px_40px_rgba(0,0,0,0.35)] border border-[rgba(255,255,255,0.08)] backdrop-blur rounded-2xl bg-[rgba(8,10,18,0.66)]'
+          'relative surface-tracer shadow-[0_18px_40px_rgba(0,0,0,0.35)] border border-[rgba(255,255,255,0.08)] backdrop-blur rounded-2xl bg-[rgba(8,10,18,0.66)]',
         )}
       >
         <textarea

@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 
 # Copy only what we need to run
 COPY --from=build /app/build /app/build
+COPY --from=build /app/public /app/public
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/package.json /app/package.json
 
@@ -60,30 +61,12 @@ CMD ["node", "build/server/index.js"]
 FROM build AS development
 
 # Define environment variables for development
-ARG GROQ_API_KEY
-ARG HuggingFace_API_KEY
+
 ARG OPENAI_API_KEY
-ARG ANTHROPIC_API_KEY
-ARG OPEN_ROUTER_API_KEY
-ARG GOOGLE_GENERATIVE_AI_API_KEY
-ARG OLLAMA_API_BASE_URL
-ARG XAI_API_KEY
-ARG TOGETHER_API_KEY
-ARG TOGETHER_API_BASE_URL
 ARG VITE_LOG_LEVEL=debug
 ARG DEFAULT_NUM_CTX
 
-ENV GROQ_API_KEY=${GROQ_API_KEY} \
-    HuggingFace_API_KEY=${HuggingFace_API_KEY} \
-    OPENAI_API_KEY=${OPENAI_API_KEY} \
-    ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY} \
-    OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY} \
-    GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY} \
-    OLLAMA_API_BASE_URL=${OLLAMA_API_BASE_URL} \
-    XAI_API_KEY=${XAI_API_KEY} \
-    TOGETHER_API_KEY=${TOGETHER_API_KEY} \
-    TOGETHER_API_BASE_URL=${TOGETHER_API_BASE_URL} \
-    AWS_BEDROCK_CONFIG=${AWS_BEDROCK_CONFIG} \
+ENV OPENAI_API_KEY=${OPENAI_API_KEY} \
     VITE_LOG_LEVEL=${VITE_LOG_LEVEL} \
     DEFAULT_NUM_CTX=${DEFAULT_NUM_CTX} \
     RUNNING_IN_DOCKER=true

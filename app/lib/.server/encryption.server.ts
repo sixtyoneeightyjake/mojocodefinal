@@ -31,10 +31,8 @@ export function decryptString(secret: string, payload: EncryptedPayload): string
   const key = deriveKey(secret);
   const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(payload.iv, 'base64'));
   decipher.setAuthTag(Buffer.from(payload.tag, 'base64'));
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(payload.ciphertext, 'base64')),
-    decipher.final(),
-  ]);
+
+  const decrypted = Buffer.concat([decipher.update(Buffer.from(payload.ciphertext, 'base64')), decipher.final()]);
 
   return decrypted.toString('utf8');
 }

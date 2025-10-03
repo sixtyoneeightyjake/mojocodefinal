@@ -1,7 +1,7 @@
-appId: com.stackblitz.bolt.diy
-productName: Bolt Local
+appId: com.sixtyoneeighty.mojocode
+productName: MojoCode Local
 directories:
-  buildResources: build
+  buildResources: assets
   output: dist
 files:
   - build/**/*
@@ -21,9 +21,9 @@ mac:
   icon: assets/icons/icon.icns
   target:
     - dmg
+    - zip
   identity: null
   category: "public.app-category.developer-tools"
-  type: "distribution"
   hardenedRuntime: true
   entitlements: "assets/entitlements.mac.plist"
   entitlementsInherit: "assets/entitlements.mac.plist"
@@ -53,10 +53,12 @@ nsis:
 
 npmRebuild: false
 
+afterSign: notarize.cjs
+
 publish:
   provider: github
-  owner: Derek-X-Wang
-  repo: bolt.local
+  owner: sixtyoneeighty
+  repo: "MojoCode.local"
   private: true
   releaseType: release
 

@@ -69,6 +69,7 @@ export function useEditChatDescription({
       }
 
       const chat = await fetchChatRequest(chatId);
+
       return chat?.description || initialDescription;
     } catch (error) {
       console.error('Failed to fetch latest description:', error);

@@ -17,19 +17,35 @@ export default defineConfig((config) => {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
     },
     build: {
-      target: 'esnext',
+      // Lower target reduces transform graph size and keeps output compatible
+      target: 'es2022',
+      // Sourcemaps are heavy and not needed for the distributed mac app
+      sourcemap: false,
+      // Avoid scary warnings with many assets
+      chunkSizeWarningLimit: 3000,
+      // Keep third‑party deps in a single vendor chunk to prevent rollup from
+      // exploding the graph and running out of memory
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) return 'vendor';
+          },
+        },
+      },
+      // Stick with esbuild minifier (fast & low memory)
+      minify: 'esbuild',
     },
     plugins: [
       shimAiMcpPlugin(),
       nodePolyfills({
-        include: ['buffer', 'process', 'util', 'stream'],
+        include: ['buffer', 'process', 'util', 'stream', 'path'],
         globals: {
           Buffer: true,
           process: true,
           global: true,
         },
         protocolImports: true,
-        exclude: ['child_process', 'fs', 'path'],
+        exclude: ['child_process', 'fs'],
       }),
       {
         name: 'buffer-polyfill',

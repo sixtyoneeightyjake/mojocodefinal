@@ -28,20 +28,14 @@ function coalesceEnvValue(key: string, sources: EnvSource[]): string | undefined
 
 export function getSupabaseConfig(args: RemixArgs): SupabaseConfig {
   const context = 'context' in args ? (args.context as any) : undefined;
-  const sources: EnvSource[] = [
-    context?.cloudflare?.env,
-    context?.env,
-    context,
-    process?.env as EnvSource,
-  ];
+  const sources: EnvSource[] = [context?.cloudflare?.env, context?.env, context, process?.env as EnvSource];
 
   const url =
     coalesceEnvValue('SUPABASE_URL', sources) ??
     coalesceEnvValue('VITE_SUPABASE_URL', sources) ??
     coalesceEnvValue('NEXT_PUBLIC_SUPABASE_URL', sources);
   const serviceRoleKey =
-    coalesceEnvValue('SUPABASE_SERVICE_ROLE_KEY', sources) ??
-    coalesceEnvValue('SUPABASE_SERVICE_KEY', sources);
+    coalesceEnvValue('SUPABASE_SERVICE_ROLE_KEY', sources) ?? coalesceEnvValue('SUPABASE_SERVICE_KEY', sources);
   const jwtSecret = coalesceEnvValue('SUPABASE_JWT_SECRET', sources);
 
   if (!url) {
@@ -55,11 +49,7 @@ export function getSupabaseConfig(args: RemixArgs): SupabaseConfig {
   return { url, serviceRoleKey, jwtSecret };
 }
 
-export async function supabaseFetch(
-  config: SupabaseConfig,
-  path: string,
-  init: RequestInit = {},
-): Promise<Response> {
+export async function supabaseFetch(config: SupabaseConfig, path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
 
   headers.set('apikey', config.serviceRoleKey);

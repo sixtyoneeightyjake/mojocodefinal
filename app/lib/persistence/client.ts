@@ -24,6 +24,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
     try {
       const errorBody = await parseJson<{ error?: string }>(response);
+
       if (errorBody?.error) {
         detail = errorBody.error;
       }

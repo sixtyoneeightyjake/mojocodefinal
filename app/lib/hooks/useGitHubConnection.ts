@@ -83,84 +83,87 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
     }
   }, []);
 
-  const connect = useCallback(async (
-    token: string,
-    tokenType: 'classic' | 'fine-grained',
-    options?: { silent?: boolean; skipServerPersist?: boolean },
-  ) => {
-    console.log('useGitHubConnection.connect called with tokenType:', tokenType);
+  const connect = useCallback(
+    async (
+      token: string,
+      tokenType: 'classic' | 'fine-grained',
+      options?: { silent?: boolean; skipServerPersist?: boolean },
+    ) => {
+      console.log('useGitHubConnection.connect called with tokenType:', tokenType);
 
-    if (!token.trim()) {
-      console.log('Token validation failed - empty token');
-      setError('Token is required');
+      if (!token.trim()) {
+        console.log('Token validation failed - empty token');
+        setError('Token is required');
 
-      return;
-    }
-
-    console.log('Setting isConnecting to true');
-    isConnecting.set(true);
-    setError(null);
-
-    try {
-      console.log('Making API request to GitHub...');
-
-      // Test the token by fetching user info
-      const response = await fetch('https://api.github.com/user', {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          Authorization: `${tokenType === 'classic' ? 'token' : 'Bearer'} ${token}`,
-          'User-Agent': 'mojocode',
-        },
-      });
-
-      console.log('GitHub API response status:', response.status, response.statusText);
-
-      if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+        return;
       }
 
-      const userData = (await response.json()) as GitHubUserResponse;
+      console.log('Setting isConnecting to true');
+      isConnecting.set(true);
+      setError(null);
 
-      // Create connection object
-      const connectionData: GitHubConnection = {
-        user: userData,
-        token,
-        tokenType,
-      };
+      try {
+        console.log('Making API request to GitHub...');
 
-      // Set cookies for API requests
-      Cookies.set('githubToken', token);
-      Cookies.set('githubUsername', userData.login);
-      Cookies.set(
-        'git:github.com',
-        JSON.stringify({
-          username: token,
-          password: 'x-oauth-basic',
-        }),
-      );
+        // Test the token by fetching user info
+        const response = await fetch('https://api.github.com/user', {
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `${tokenType === 'classic' ? 'token' : 'Bearer'} ${token}`,
+            'User-Agent': 'mojocode',
+          },
+        });
 
-      // Update the store
-      updateGitHubConnection(connectionData);
+        console.log('GitHub API response status:', response.status, response.statusText);
 
-      if (!options?.skipServerPersist) {
-        await persistToken(token, tokenType);
+        if (!response.ok) {
+          throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+        }
+
+        const userData = (await response.json()) as GitHubUserResponse;
+
+        // Create connection object
+        const connectionData: GitHubConnection = {
+          user: userData,
+          token,
+          tokenType,
+        };
+
+        // Set cookies for API requests
+        Cookies.set('githubToken', token);
+        Cookies.set('githubUsername', userData.login);
+        Cookies.set(
+          'git:github.com',
+          JSON.stringify({
+            username: token,
+            password: 'x-oauth-basic',
+          }),
+        );
+
+        // Update the store
+        updateGitHubConnection(connectionData);
+
+        if (!options?.skipServerPersist) {
+          await persistToken(token, tokenType);
+        }
+
+        if (!options?.silent) {
+          toast.success(`Connected to GitHub as ${userData.login}`);
+        }
+      } catch (error) {
+        console.error('Failed to connect to GitHub:', error);
+
+        const errorMessage = error instanceof Error ? error.message : 'Failed to connect to GitHub';
+
+        setError(errorMessage);
+        toast.error(`Failed to connect: ${errorMessage}`);
+        throw error;
+      } finally {
+        isConnecting.set(false);
       }
-
-      if (!options?.silent) {
-        toast.success(`Connected to GitHub as ${userData.login}`);
-      }
-    } catch (error) {
-      console.error('Failed to connect to GitHub:', error);
-
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect to GitHub';
-
-      setError(errorMessage);
-      toast.error(`Failed to connect: ${errorMessage}`);
-      throw error;
-    } finally {
-      isConnecting.set(false);
-    }
-  }, [persistToken]);
+    },
+    [persistToken],
+  );
 
   const loadSavedConnection = useCallback(async () => {
     setIsLoading(true);
@@ -175,6 +178,7 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
       if (connection?.token && (!connection.user || !connection.stats)) {
         await refreshConnectionData(connection);
         setIsLoading(false);
+
         return;
       }
 
@@ -191,6 +195,7 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
                 skipServerPersist: true,
               });
               setIsLoading(false);
+
               return;
             }
           }

@@ -152,13 +152,17 @@ async function updateChatFields(
 ): Promise<void> {
   const encodedUser = encodeURIComponent(userId);
   const encodedUrl = encodeURIComponent(urlId);
-  const response = await supabaseFetch(config, `/rest/v1/chat_sessions?user_id=eq.${encodedUser}&url_id=eq.${encodedUrl}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      ...fields,
-      updated_at: new Date().toISOString(),
-    }),
-  });
+  const response = await supabaseFetch(
+    config,
+    `/rest/v1/chat_sessions?user_id=eq.${encodedUser}&url_id=eq.${encodedUrl}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...fields,
+        updated_at: new Date().toISOString(),
+      }),
+    },
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to update chat (${response.status})`);
@@ -183,6 +187,7 @@ export async function loader(args: LoaderFunctionArgs) {
     }
 
     const chats = await listChats(config, userId);
+
     return json({ chats });
   } catch (error) {
     console.error('Chat history loader error:', error);
@@ -211,12 +216,16 @@ export async function action(args: ActionFunctionArgs) {
 
       const encodedUser = encodeURIComponent(userId);
       const encodedId = encodeURIComponent(row.id);
-      const response = await supabaseFetch(config, `/rest/v1/chat_sessions?user_id=eq.${encodedUser}&id=eq.${encodedId}`, {
-        method: 'DELETE',
-        headers: {
-          Prefer: 'count=exact',
+      const response = await supabaseFetch(
+        config,
+        `/rest/v1/chat_sessions?user_id=eq.${encodedUser}&id=eq.${encodedId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Prefer: 'count=exact',
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to delete chat (${response.status})`);
@@ -248,6 +257,7 @@ export async function action(args: ActionFunctionArgs) {
         }
 
         const row = await upsertChat(config, userId, body.payload);
+
         return json({ chat: mapToHistoryItem(row) });
       }
 
@@ -325,6 +335,7 @@ export async function action(args: ActionFunctionArgs) {
         }
 
         await updateChatFields(config, userId, body.urlId, { description: body.description });
+
         return json({ success: true });
       }
 
@@ -334,6 +345,7 @@ export async function action(args: ActionFunctionArgs) {
         }
 
         await updateChatFields(config, userId, body.urlId, { metadata: body.metadata ?? null });
+
         return json({ success: true });
       }
 

@@ -46,10 +46,7 @@ const menuVariants = {
   },
 } satisfies Variants;
 
-type DialogContent =
-  | { type: 'delete'; item: ChatSummary }
-  | { type: 'bulkDelete'; items: ChatSummary[] }
-  | null;
+type DialogContent = { type: 'delete'; item: ChatSummary } | { type: 'bulkDelete'; items: ChatSummary[] } | null;
 
 function CurrentDateTime() {
   const [dateTime, setDateTime] = useState(new Date());
@@ -118,13 +115,10 @@ export const Menu = () => {
       .catch((error) => toast.error(error.message));
   }, []);
 
-  const deleteChat = useCallback(
-    async (id: string): Promise<void> => {
-      await deleteChatRequest(id);
-      console.log('Successfully deleted chat:', id);
-    },
-    [],
-  );
+  const deleteChat = useCallback(async (id: string): Promise<void> => {
+    await deleteChatRequest(id);
+    console.log('Successfully deleted chat:', id);
+  }, []);
 
   const deleteItem = useCallback(
     (event: React.UIEvent, item: ChatSummary) => {
@@ -334,6 +328,7 @@ export const Menu = () => {
     if (input.trim() === SETTINGS_PASSWORD) {
       setIsSettingsOpen(true);
       setOpen(false);
+
       return;
     }
 

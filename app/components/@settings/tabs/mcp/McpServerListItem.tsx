@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Tool } from 'ai';
 
 type ParameterProperty = {
@@ -17,7 +18,7 @@ type McpToolProps = {
   toolSchema: Tool;
 };
 
-export default function McpServerListItem({ toolName, toolSchema }: McpToolProps) {
+const McpServerListItem = memo(({ toolName, toolSchema }: McpToolProps) => {
   if (!toolSchema) {
     return null;
   }
@@ -67,4 +68,6 @@ export default function McpServerListItem({ toolName, toolSchema }: McpToolProps
       </div>
     </div>
   );
-}
+});
+
+export default McpServerListItem;

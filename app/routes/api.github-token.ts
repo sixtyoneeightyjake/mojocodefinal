@@ -15,6 +15,7 @@ interface TokenRow {
 function buildTokenQuery(userId: string): string {
   const encodedUser = encodeURIComponent(userId);
   const encodedProvider = encodeURIComponent(PROVIDER);
+
   return `user_id=eq.${encodedUser}&provider=eq.${encodedProvider}`;
 }
 

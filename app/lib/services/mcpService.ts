@@ -142,11 +142,9 @@ export class MCPService {
   static getInstance(): MCPService {
     if (!MCPService._instance) {
       MCPService._instance = new MCPService();
-      MCPService._instance
-        .updateConfig(cloneMCPConfig(DEFAULT_MCP_CONFIG))
-        .catch((error) => {
-          logger.error('Failed to initialize default MCP configuration', error);
-        });
+      MCPService._instance.updateConfig(cloneMCPConfig(DEFAULT_MCP_CONFIG)).catch((error) => {
+        logger.error('Failed to initialize default MCP configuration', error);
+      });
     }
 
     return MCPService._instance;

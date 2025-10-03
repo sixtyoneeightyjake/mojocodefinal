@@ -20,11 +20,7 @@ const toolbarTriggerClasses =
 const defaultTriggerClasses =
   'gap-2 px-3 py-1.5 text-xs bg-accent-500 text-white hover:bg-bolt-elements-button-primary-backgroundHover border border-accent-500/40 rounded-md transition-colors duration-200 ease-in-out';
 
-export const ExportChatButton = ({
-  exportChat,
-  appearance = 'toolbar',
-  className,
-}: ExportChatButtonProps) => {
+export const ExportChatButton = ({ exportChat, appearance = 'toolbar', className }: ExportChatButtonProps) => {
   const { isConnected: isGitHubConnected } = useGitHubConnection();
   const { handleGitHubDeploy, isDeploying } = useGitHubDeploy();
   const [showGitHubDeploymentDialog, setShowGitHubDeploymentDialog] = useState(false);
@@ -52,6 +48,7 @@ export const ExportChatButton = ({
     if (!isGitHubConnected) {
       setPendingGitHubPush(true);
       setShowGitHubAuthDialog(true);
+
       return;
     }
 
@@ -145,6 +142,7 @@ export const ExportChatButton = ({
         }}
         onSuccess={() => {
           setShowGitHubAuthDialog(false);
+
           if (pendingGitHubPush) {
             setPendingGitHubPush(false);
             setTimeout(() => {

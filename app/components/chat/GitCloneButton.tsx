@@ -92,6 +92,7 @@ export default function GitCloneButton({
 
     setLoading(true);
     setIsDialogOpen(false);
+
     try {
       const cloneTarget = branch ? `${repoUrl}#${branch}` : repoUrl;
       const { workdir, data } = await gitClone(cloneTarget);

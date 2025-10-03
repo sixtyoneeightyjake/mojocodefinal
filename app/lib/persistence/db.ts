@@ -42,11 +42,7 @@ export async function getSnapshot(_db: IDBDatabase | undefined, _chatId: string)
   return undefined;
 }
 
-export async function setSnapshot(
-  _db: IDBDatabase | undefined,
-  _chatId: string,
-  _snapshot: Snapshot,
-): Promise<void> {
+export async function setSnapshot(_db: IDBDatabase | undefined, _chatId: string, _snapshot: Snapshot): Promise<void> {
   return;
 }
 

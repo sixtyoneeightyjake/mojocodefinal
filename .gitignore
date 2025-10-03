@@ -52,3 +52,5 @@ docs/instructions/Roadmap.md
 .env.production
 .env.production
 .env.example
+.env.example
+.env.production

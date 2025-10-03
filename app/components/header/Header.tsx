@@ -75,7 +75,8 @@ export function Header() {
       <div className="flex items-center gap-2 z-logo text-bolt-elements-textPrimary cursor-pointer">
         <div className="i-ph:sidebar-simple-duotone text-xl text-bolt-elements-textSecondary transition-theme" />
         <a href="/" className="group relative flex items-center">
-          <div className="absolute inset-0 scale-[1.1] rounded-full opacity-0 blur-lg transition-opacity duration-500 group-hover:opacity-70"
+          <div
+            className="absolute inset-0 scale-[1.1] rounded-full opacity-0 blur-lg transition-opacity duration-500 group-hover:opacity-70"
             style={{
               background:
                 'radial-gradient(circle at 20% 20%, rgba(255, 59, 115, 0.5) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.12) 0%, transparent 45%)',

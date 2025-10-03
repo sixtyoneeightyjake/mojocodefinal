@@ -23,18 +23,6 @@ export const chatId = atom<string | undefined>(undefined);
 export const description = atom<string | undefined>(undefined);
 export const chatMetadata = atom<IChatMetadata | undefined>(undefined);
 
-interface ChatHistoryItemResponse {
-  id: string;
-  urlId: string;
-  description?: string;
-  messages: Message[];
-  metadata?: IChatMetadata;
-  snapshot?: Snapshot | null;
-  createdAt: string;
-  updatedAt: string;
-  timestamp: string;
-}
-
 export function useChatHistory() {
   const navigate = useNavigate();
   const { id: mixedId } = useLoaderData<{ id?: string }>();
@@ -86,14 +74,9 @@ export function useChatHistory() {
   }, []);
 
   useEffect(() => {
-    if (!persistenceEnabled) {
+    if (!persistenceEnabled || !mixedId) {
       setReady(true);
-      return;
-    }
-
-    if (!mixedId) {
-      setReady(true);
-      return;
+      return undefined;
     }
 
     let cancelled = false;
@@ -112,9 +95,7 @@ export function useChatHistory() {
         const rewindId = searchParams.get('rewindTo');
         let startingIdx = -1;
         const endingIdx = rewindId ? storedMessages.findIndex((m) => m.id === rewindId) + 1 : storedMessages.length;
-        const snapshotIndex = snapshot
-          ? storedMessages.findIndex((m) => m.id === snapshot.chatIndex)
-          : -1;
+        const snapshotIndex = snapshot ? storedMessages.findIndex((m) => m.id === snapshot.chatIndex) : -1;
 
         if (snapshotIndex >= 0 && snapshotIndex < endingIdx) {
           startingIdx = snapshotIndex;
@@ -221,74 +202,73 @@ ${value.content}
   }, [mixedId, searchParams, navigate, restoreSnapshot]);
 
   const storeMessageHistory = useCallback(
-    async (messages: Message[]) => {
-      if (!persistenceEnabled || messages.length === 0) {
-        return;
-      }
+    async (messages: Message[]): Promise<void> => {
+      if (persistenceEnabled && messages.length > 0) {
+        try {
+          const { firstArtifact } = workbenchStore;
+          const filteredMessages = messages.filter((m) => !m.annotations?.includes('no-store'));
+          const combinedMessages = [...archivedMessages, ...filteredMessages];
 
-      try {
-        const { firstArtifact } = workbenchStore;
-        const filteredMessages = messages.filter((m) => !m.annotations?.includes('no-store'));
-        const combinedMessages = [...archivedMessages, ...filteredMessages];
+          if (combinedMessages.length > 0) {
+            const lastMessage = combinedMessages[combinedMessages.length - 1];
 
-        if (combinedMessages.length > 0) {
-          const lastMessage = combinedMessages[combinedMessages.length - 1];
+            let chatSummary: string | undefined;
 
-          let chatSummary: string | undefined;
-          if (lastMessage.role === 'assistant') {
-            const annotations = lastMessage.annotations as JSONValue[];
-            const filteredAnnotations = (annotations?.filter(
-              (annotation: JSONValue) =>
-                annotation && typeof annotation === 'object' && Object.keys(annotation).includes('type'),
-            ) || []) as { type: string; value: any } & { [key: string]: any }[];
+            if (lastMessage.role === 'assistant') {
+              const annotations = lastMessage.annotations as JSONValue[];
+              const filteredAnnotations = (annotations?.filter(
+                (annotation: JSONValue) =>
+                  annotation && typeof annotation === 'object' && Object.keys(annotation).includes('type'),
+              ) || []) as { type: string; value: any } & { [key: string]: any }[];
 
-            const summaryAnnotation = filteredAnnotations.find((annotation) => annotation.type === 'chatSummary');
+              const summaryAnnotation = filteredAnnotations.find((annotation) => annotation.type === 'chatSummary');
 
-            if (summaryAnnotation) {
-              chatSummary = summaryAnnotation.summary;
+              if (summaryAnnotation) {
+                chatSummary = summaryAnnotation.summary;
+              }
             }
+
+            pendingSnapshotRef.current = {
+              chatIndex: lastMessage.id,
+              files: workbenchStore.files.get(),
+              summary: chatSummary,
+            };
           }
 
-          pendingSnapshotRef.current = {
-            chatIndex: lastMessage.id,
-            files: workbenchStore.files.get(),
-            summary: chatSummary,
-          };
+          let resolvedDescription = description.get();
+
+          if (!resolvedDescription && firstArtifact?.title) {
+            resolvedDescription = firstArtifact.title;
+            description.set(resolvedDescription);
+          }
+
+          let resolvedUrlId = urlId ?? chatId.get();
+          const snapshotToPersist = pendingSnapshotRef.current ?? currentSnapshot;
+
+          const chat = await upsertChatRequest({
+            urlId: resolvedUrlId,
+            description: resolvedDescription ?? null,
+            messages: combinedMessages,
+            metadata: chatMetadata.get() ?? null,
+            snapshot: snapshotToPersist ?? null,
+          });
+
+          setUrlId(chat.urlId);
+          chatId.set(chat.urlId);
+          description.set(chat.description);
+          chatMetadata.set(chat.metadata);
+          setCurrentSnapshot(chat.snapshot ?? snapshotToPersist ?? null);
+          pendingSnapshotRef.current = null;
+
+          if (!resolvedUrlId && chat.urlId) {
+            navigateChat(chat.urlId);
+            resolvedUrlId = chat.urlId;
+          }
+        } catch (error) {
+          console.error('Failed to save chat history:', error);
+          logStore.logError('Failed to save chat history', { error });
+          toast.error(error instanceof Error ? error.message : 'Failed to save chat history');
         }
-
-        let resolvedDescription = description.get();
-
-        if (!resolvedDescription && firstArtifact?.title) {
-          resolvedDescription = firstArtifact.title;
-          description.set(resolvedDescription);
-        }
-
-        let resolvedUrlId = urlId ?? chatId.get();
-        const snapshotToPersist = pendingSnapshotRef.current ?? currentSnapshot;
-
-        const chat = await upsertChatRequest({
-          urlId: resolvedUrlId,
-          description: resolvedDescription ?? null,
-          messages: combinedMessages,
-          metadata: chatMetadata.get() ?? null,
-          snapshot: snapshotToPersist ?? null,
-        });
-
-        setUrlId(chat.urlId);
-        chatId.set(chat.urlId);
-        description.set(chat.description);
-        chatMetadata.set(chat.metadata);
-        setCurrentSnapshot(chat.snapshot ?? snapshotToPersist ?? null);
-        pendingSnapshotRef.current = null;
-
-        if (!resolvedUrlId && chat.urlId) {
-          navigateChat(chat.urlId);
-          resolvedUrlId = chat.urlId;
-        }
-      } catch (error) {
-        console.error('Failed to save chat history:', error);
-        logStore.logError('Failed to save chat history', { error });
-        toast.error(error instanceof Error ? error.message : 'Failed to save chat history');
       }
     },
     [archivedMessages, currentSnapshot, urlId],
@@ -296,23 +276,19 @@ ${value.content}
 
   const updateChatMestaData = useCallback(
     async (metadata: IChatMetadata) => {
-      if (!persistenceEnabled) {
-        return;
-      }
+      if (persistenceEnabled) {
+        const currentUrlId = urlId ?? chatId.get();
 
-      const currentUrlId = urlId ?? chatId.get();
-
-      if (!currentUrlId) {
-        return;
-      }
-
-      try {
-        await updateChatMetadataRequest(currentUrlId, metadata);
-        chatMetadata.set(metadata);
-      } catch (error) {
-        console.error('Failed to update chat metadata:', error);
-        logStore.logError('Failed to update chat metadata', { error });
-        toast.error('Failed to update chat metadata');
+        if (currentUrlId) {
+          try {
+            await updateChatMetadataRequest(currentUrlId, metadata);
+            chatMetadata.set(metadata);
+          } catch (error) {
+            console.error('Failed to update chat metadata:', error);
+            logStore.logError('Failed to update chat metadata', { error });
+            toast.error('Failed to update chat metadata');
+          }
+        }
       }
     },
     [urlId],

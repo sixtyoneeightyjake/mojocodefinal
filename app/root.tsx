@@ -17,9 +17,12 @@ import xtermStyles from '@xterm/xterm/css/xterm.css?url';
 import 'virtual:uno.css';
 
 import { ClerkApp } from '@clerk/remix';
-// Client-safe defaults for Clerk auth pages. Avoid importing server-only
-// `~/utils/clerk.server` at module scope because Vite will treat this file
-// as a client route and fail when server-only modules are referenced.
+
+/*
+ * Client-safe defaults for Clerk auth pages. Avoid importing server-only
+ * `~/utils/clerk.server` at module scope because Vite will treat this file
+ * as a client route and fail when server-only modules are referenced.
+ */
 const DEFAULT_SIGN_IN_URL = 'https://relevant-burro-77.accounts.dev/sign-in';
 const DEFAULT_SIGN_UP_URL = 'https://relevant-burro-77.accounts.dev/sign-up';
 
@@ -49,8 +52,10 @@ export const links: LinksFunction = () => [
 ];
 
 export const loader = async (args: LoaderFunctionArgs) => {
-  // Dynamically import server-only utilities to avoid Vite trying to
-  // resolve/transform them when serving the module to the browser.
+  /*
+   * Dynamically import server-only utilities to avoid Vite trying to
+   * resolve/transform them when serving the module to the browser.
+   */
   const [{ rootAuthLoader }, { resolveClerkEnv }] = await Promise.all([
     import('@clerk/remix/ssr.server'),
     import('~/utils/clerk.server'),

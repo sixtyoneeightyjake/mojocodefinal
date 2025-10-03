@@ -2,16 +2,16 @@
 import { createRequestHandler } from '@remix-run/node';
 import electron, { app, BrowserWindow, ipcMain, protocol, session } from 'electron';
 import log from 'electron-log';
+import { config as loadEnvConfig } from 'dotenv';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pkg from '../../package.json';
 import { setupAutoUpdater } from './utils/auto-update';
 import { isDev, DEFAULT_PORT } from './utils/constants';
-import { initViteServer, viteServer } from './utils/vite-server';
 import { setupMenu } from './ui/menu';
 import { createWindow } from './ui/window';
 import { initCookies, storeCookies } from './utils/cookie';
 import { loadServerBuild, serveAsset } from './utils/serve';
-import { reloadOnChange } from './utils/reload';
 
 Object.assign(console, log.functions);
 
@@ -68,9 +68,57 @@ declare global {
   var __electron__: typeof electron;
 }
 
+function loadExternalEnvFiles() {
+  const paths = new Set<string>();
+
+  const appendPaths = (...candidates: Array<string | undefined>) => {
+    candidates.forEach((candidate) => {
+      if (!candidate) {
+        return;
+      }
+
+      const resolved = path.resolve(candidate);
+      paths.add(resolved);
+    });
+  };
+
+  appendPaths(process.env.APP_ENV_FILE, process.env.APP_ENV_DIR && path.join(process.env.APP_ENV_DIR, '.env.local'));
+  appendPaths(path.join(process.cwd(), '.env.local'), path.join(process.cwd(), '.env'));
+
+  if (app.isPackaged) {
+    appendPaths(path.join(process.resourcesPath, '.env.local'), path.join(process.resourcesPath, '.env'));
+  }
+
+  try {
+    const userDataDir = app.getPath('userData');
+    appendPaths(path.join(userDataDir, '.env.local'), path.join(userDataDir, '.env'));
+  } catch (error) {
+    console.log('Failed to determine userData path for env hydration:', error);
+  }
+
+  for (const envPath of paths) {
+    if (!existsSync(envPath)) {
+      continue;
+    }
+
+    try {
+      loadEnvConfig({ path: envPath, override: false });
+      console.log(`Loaded environment variables from ${envPath}`);
+    } catch (error) {
+      console.log('Failed to load environment file:', { envPath, error });
+    }
+  }
+}
+
 (async () => {
   await app.whenReady();
   console.log('App is ready');
+
+  loadExternalEnvFiles();
+  console.log('Clerk env present:', {
+    hasPublishableKey: Boolean(process.env.CLERK_PUBLISHABLE_KEY),
+    hasSecretKey: Boolean(process.env.CLERK_SECRET_KEY),
+  });
 
   // Load any existing cookies from ElectronStore, set as cookie
   await initCookies();
@@ -153,16 +201,14 @@ declare global {
 
   const rendererURL = await (isDev
     ? (async () => {
+        const { initViteServer, viteServer } = await import('./utils/vite-server');
         await initViteServer();
-
         if (!viteServer) {
           throw new Error('Vite server is not initialized');
         }
-
         const listen = await viteServer.listen();
         global.__electron__ = electron;
         viteServer.printUrls();
-
         return `http://localhost:${listen.config.server.port}`;
       })()
     : `http://localhost:${DEFAULT_PORT}`);
@@ -197,5 +243,7 @@ app.on('window-all-closed', () => {
   }
 });
 
-reloadOnChange();
+if (isDev) {
+  import('./utils/reload').then((m) => m.reloadOnChange());
+}
 setupAutoUpdater();
