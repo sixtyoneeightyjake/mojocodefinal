@@ -74,14 +74,13 @@ if (savedCredentials && !initialState.credentials) {
 }
 
 export const supabaseConnection = atom<SupabaseConnectionState>(initialState);
+export const isConnecting = atom(false);
+export const isFetchingStats = atom(false);
+export const isFetchingApiKeys = atom(false);
 
 if (initialState.token && !initialState.stats) {
   fetchSupabaseStats(initialState.token).catch(console.error);
 }
-
-export const isConnecting = atom(false);
-export const isFetchingStats = atom(false);
-export const isFetchingApiKeys = atom(false);
 
 export function updateSupabaseConnection(connection: Partial<SupabaseConnectionState>) {
   const currentState = supabaseConnection.get();

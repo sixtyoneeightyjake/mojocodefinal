@@ -74,6 +74,9 @@ export default defineConfig((config) => {
       chrome129IssuePlugin(),
       config.mode === 'production' && optimizeCssModules({ apply: 'build' }),
     ],
+    resolve: {
+      dedupe: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
+    },
     envPrefix: [
       'VITE_',
       'OPENAI_LIKE_API_BASE_URL',
