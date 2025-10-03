@@ -1,5 +1,4 @@
 import {
-  getLockedItems,
   isFileLocked as isFileLockedInternal,
   isFolderLocked as isFolderLockedInternal,
   isPathInLockedFolder,
@@ -75,22 +74,5 @@ export function isFolderLocked(folderPath: string, chatId?: string): { locked: b
   } catch (error) {
     logger.error('Failed to check if folder is locked', error);
     return { locked: false };
-  }
-}
-
-/**
- * Check if any files are locked in the current chat
- * @param chatId Optional chat ID (will be extracted from URL if not provided)
- * @returns True if any files or folders are locked
- */
-export function hasLockedItems(chatId?: string): boolean {
-  try {
-    const currentChatId = chatId || getCurrentChatId();
-    const lockedItems = getLockedItems();
-
-    return lockedItems.some((item) => item.chatId === currentChatId);
-  } catch (error) {
-    logger.error('Failed to check for locked items', error);
-    return false;
   }
 }

@@ -12,20 +12,6 @@ export interface GitHubUserResponse {
   updated_at: string;
 }
 
-export interface GitLabProjectInfo {
-  id: string;
-  name: string;
-  full_name: string;
-  html_url: string;
-  description: string;
-  stargazers_count: number;
-  forks_count: number;
-  default_branch: string;
-  updated_at: string;
-  language: string;
-  languages_url: string;
-}
-
 export interface GitHubRepoInfo {
   id: string;
   name: string;
@@ -53,34 +39,12 @@ export interface GitHubRepoInfo {
   };
 }
 
-export interface GitHubContent {
-  name: string;
-  path: string;
-  sha: string;
-  size: number;
-  url: string;
-  html_url: string;
-  git_url: string;
-  download_url: string;
-  type: string;
-  content: string;
-  encoding: string;
-}
-
 export interface GitHubBranch {
   name: string;
   commit: {
     sha: string;
     url: string;
   };
-}
-
-export interface GitHubBlobResponse {
-  content: string;
-  encoding: string;
-  sha: string;
-  size: number;
-  url: string;
 }
 
 export interface GitHubOrganization {
@@ -162,15 +126,6 @@ export interface GitHubRateLimits {
   remaining: number;
   reset: Date;
   used: number;
-}
-
-export interface GitHubAuthState {
-  username: string;
-  tokenInfo: GitHubTokenInfo | null;
-  isConnected: boolean;
-  isVerifying: boolean;
-  isLoadingRepos: boolean;
-  rateLimits?: GitHubRateLimits;
 }
 
 export interface RepositoryStats {

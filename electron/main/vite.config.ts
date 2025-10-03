@@ -31,6 +31,7 @@ export default defineConfig({
 
         // "mime", // NOTE: don't enable. not working if it's external.
         'electron-updater',
+        'dotenv',
       ],
       output: {
         dir: 'build/electron',

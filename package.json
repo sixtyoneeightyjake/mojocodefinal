@@ -1,5 +1,5 @@
 {
-  "name": "bolt",
+  "name": "mojocode",
   "description": "An AI Agent",
   "private": true,
   "license": "MIT",
@@ -7,8 +7,8 @@
   "type": "module",
   "version": "1.0.0",
   "author": {
-    "name": "bolt.diy team",
-    "email": "maintainers@bolt.diy"
+    "name": "mojocode team",
+    "email": "maintainers@mojocode.com"
   },
   "scripts": {
     "deploy": "npm run build && wrangler pages deploy",
@@ -30,12 +30,13 @@
     "preview": "pnpm run build && pnpm run start",
     "prepare": "husky",
     "clean": "node scripts/clean.js",
+    "electron": "electron .",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:dev:inspect": "NODE_ENV=development electron --inspect=9229 build/electron/main/index.mjs",
     "electron:build:deps": "concurrently \"pnpm electron:build:main\" \"pnpm electron:build:preload\" --kill-others-on-fail",
     "electron:build:main": "vite build --config ./electron/main/vite.config.ts",
     "electron:build:preload": "vite build --config ./electron/preload/vite.config.ts",
-    "electron:build:renderer": "remix vite:build --config vite-electron.config.js",
+    "electron:build:renderer": "cross-env NODE_OPTIONS=--max-old-space-size=6144 remix vite:build --config vite-electron.config.js",
     "electron:build:unpack": "rm -rf dist && pnpm electron:build:renderer && pnpm electron:build:deps && electron-builder --dir",
     "electron:build:mac": "rm -rf dist && pnpm electron:build:renderer && pnpm electron:build:deps && electron-builder --mac",
     "electron:build:win": "rm -rf dist && pnpm electron:build:renderer && pnpm electron:build:deps && electron-builder --win",
@@ -74,7 +75,6 @@
     "@codemirror/view": "^6.35.0",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
-    "@iconify-json/svg-spinners": "^1.2.1",
     "@lezer/highlight": "^1.2.1",
     "@modelcontextprotocol/sdk": "^1.15.0",
     "@nanostores/react": "^0.7.3",
@@ -164,7 +164,8 @@
     "@blitz/eslint-plugin": "0.1.0",
     "@cloudflare/workers-types": "^4.20241127.0",
     "@electron/notarize": "^2.5.0",
-    "@iconify-json/ph": "^1.2.1",
+    "@iconify-json/ph": "^1.2.2",
+    "@iconify-json/svg-spinners": "^1.2.2",
     "@iconify/types": "^2.0.0",
     "@remix-run/dev": "^2.15.2",
     "@remix-run/serve": "^2.15.2",
@@ -185,6 +186,7 @@
     "crypto-browserify": "^3.12.1",
     "electron": "^33.2.0",
     "electron-builder": "^26.0.12",
+    "esbuild": "^0.25.10",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
     "fast-glob": "^3.3.2",

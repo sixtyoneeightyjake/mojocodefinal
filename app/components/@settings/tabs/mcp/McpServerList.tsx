@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { MCPServer } from '~/lib/services/mcpConfig';
 import McpStatusBadge from '~/components/@settings/tabs/mcp/McpStatusBadge';
 import McpServerListItem from '~/components/@settings/tabs/mcp/McpServerListItem';
@@ -17,20 +18,25 @@ export default function McpServerList({
   onlyShowAvailableServers = false,
   toggleServerExpanded,
 }: McpServerListProps) {
+  const filteredEntries = useMemo(
+    () =>
+      onlyShowAvailableServers
+        ? serverEntries.filter(([, server]) => server.status === 'available')
+        : serverEntries,
+    [serverEntries, onlyShowAvailableServers],
+  );
+
   if (serverEntries.length === 0) {
     return <p className="text-sm text-bolt-elements-textSecondary">No MCP servers configured</p>;
   }
-
-  const filteredEntries = onlyShowAvailableServers
-    ? serverEntries.filter(([, s]) => s.status === 'available')
-    : serverEntries;
 
   return (
     <div className="space-y-2">
       {filteredEntries.map(([serverName, mcpServer]) => {
         const isAvailable = mcpServer.status === 'available';
         const isExpanded = expandedServer === serverName;
-        const serverTools = isAvailable ? (Object.entries(mcpServer.tools) as [string, any][]) : [];
+        const shouldShowTools = isAvailable && isExpanded;
+        const serverTools = shouldShowTools ? (Object.entries(mcpServer.tools) as [string, any][]) : [];
 
         return (
           <div key={serverName} className="flex flex-col p-2 rounded-md bg-bolt-elements-background-depth-1">
@@ -65,7 +71,7 @@ export default function McpServerList({
             )}
 
             {/* Tool list */}
-            {isExpanded && isAvailable && (
+            {shouldShowTools && (
               <div className="mt-2">
                 <div className="text-bolt-elements-textSecondary text-xs font-medium ml-1 mb-1.5">Available Tools:</div>
                 {serverTools.length === 0 ? (

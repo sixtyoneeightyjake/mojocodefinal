@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- Black rounded square background -->
+  <rect width="16" height="16" rx="3" fill="#0A0A0A" />
+  <!-- Stylized 'M' mark in red to represent MojoCode -->
+  <path d="M4 11V5l2.5 3L9 5v6" fill="none" stroke="#E02424" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Accent diagonal to add a bolt-like energy -->
+  <path d="M10.6 6.2l1.8-1.4-1 3.6L14 7.5l-3 5-1.4-1 1.2-3.4-2.2 1.6" fill="none" stroke="#E02424" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.95" />
+</svg>
