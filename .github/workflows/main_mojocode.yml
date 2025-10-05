@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - MojoCode
+name: Build and deploy Node.js app to Azure Web App - mojocode
 
 on:
   push:
@@ -51,15 +51,15 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F29D4E1A2BA9467BAF60C927E45C3A78 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_151734AAC24646CCB6AB60FE372AA460 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_79255A53686746C88A151F5C900C0D69 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8C3FFDCB8B3C4DFC809F852925A7B56E }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_22AC6516615D41BE8DB09FE7C01A810D }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0BD37A39F8AD40139C8E20EC4D5D5E15 }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'MojoCode'
+          app-name: 'mojocode'
           slot-name: 'Production'
           package: .
           
